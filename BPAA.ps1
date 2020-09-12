@@ -1,6 +1,6 @@
 ﻿# =================================================================================================================================================
 # Best Practice Analyzer Automation (BPAA)
-# Version 0.01
+# Version 0.01 alpha 2
 # 
 # Dave Ruijter
 # https://moderndata.ai/
@@ -37,23 +37,19 @@ $TabularEditorUrl = "https://github.com/otykier/TabularEditor/releases/download/
 # URL to the BPA rules file
 $BestPracticesRulesUrl = "https://raw.githubusercontent.com/TabularEditor/BestPracticeRules/master/BPARules-PowerBI.json"
 
-# TenantId of the Power BI Service
-# (required to use the Service Principal)
-# By default it will prompt for the TenantId, but you can hard-code it if you want by uncommenting the other line of code
+# Service Principal values
+$PowerBIServicePrincipalClientId = Read-Host -Prompt 'Specify the Application (Client) Id of the Service Principal'
+$PowerBIServicePrincipalSecret = Read-Host -Prompt 'Specify the secret of the Service Principal' -AsSecureString
 $PowerBIServicePrincipalTenantId = Read-Host -Prompt 'Specify the tenantid of the Service Principal'
-#$PowerBIServicePrincipalTenantId = "680c2e2d-0ad8-4d66-a0ae-ebaf8dc134bd"
 
 # =================================================================================================================================================
 
 # TODO:
 
-# - mention that only a service principal approach is supported now
 # - Check if TE is already installed and available via program files
-# - Add credential prompt as default
 # - Add option to start/suspend A sku
 # - Add option to move workspace to Premium capacity during script execution
 # - Add a switch for the BPA results file
-# - Add logic to add the service principal in all workspaces in the Power BI Service
 # - Add support to specify a local BPA rules file (instead of Url)
 
 # =================================================================================================================================================
@@ -156,15 +152,16 @@ Write-Host 'Done.'
 # Download BPA rules file
 Write-Host 'Downloading the standard Best Practice Rules of Tabular Editor from GitHub...'
 $TabularEditorBPARulesPath = Join-Path -Path $TabularEditorPortableRootPath -ChildPath "\BPARules-PowerBI.json"
-Invoke-WebRequest -Uri $BestPracticesRules -OutFile $TabularEditorBPARulesPath
+Invoke-WebRequest -Uri $BestPracticesRulesUrl -OutFile $TabularEditorBPARulesPath
 Write-Host 'Done.'
 
 Write-Host "=================================================================================================================================="
 
 # Connect to the Power BI Service
-Write-Host "Connecting to the Power BI Service..."
-$credential = (Get-Credential)
-Connect-PowerBIServiceAccount -ServicePrincipal -Credential $credential -TenantId $PowerBIServicePrincipalTenantId
+Write-Host 'Creating credential based on Service Principal and connecting to the Power BI Service...'
+$PowerBIServicePrincipalSecretSecured = $PowerBIServicePrincipalSecret | ConvertTo-SecureString -asPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential($PowerBIServicePrincipalClientId, $PowerBIServicePrincipalSecretSecured)
+Connect-PowerBIServiceAccount -ServicePrincipal -Credential $credential -Tenant $PowerBIServicePrincipalTenantId
 Write-Host "Done. (details about the environment should be posted above)"
 
 Write-Host "=================================================================================================================================="
@@ -174,24 +171,25 @@ Write-Host 'Retrieving all Premium Power BI workspaces (that the Service Princip
 Get-PowerBIWorkspace -All | Where-Object {$_.IsOnDedicatedCapacity -eq $True} | ForEach-Object {
     Write-Host "=================================================================================================================================="
     $workspaceName = $_.Name
-    Write-Host "Found Premium workspace: $workspaceName."
+    Write-Host "Found Premium workspace: $workspaceName.`n"
     Write-Host "Retrieving all datasets in the workspace."
     Get-PowerBIDataset -WorkspaceId $_.Id | ForEach-Object {
         $datasetName = $_.Name
-        Write-Host "Found Premium dataset: $datasetName."
+        Write-Host "Found Premium dataset: $datasetName.`n"
 
         # Prepare the output directory (it needs to exist)
         $DatasetTRXOutputDir = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\$TRXOutputFolder\$workspaceName\"
         new-item $DatasetTRXOutputDir -itemtype directory -Force | Out-Null # the Out-Null prevents this line of code to output to the host
         $DatasetTRXOutputPath = Join-Path -Path $DatasetTRXOutputDir -ChildPath "\BPAA - $workspaceName - $datasetName.trx"
 
-        # Call Tabular Editor!
-        Write-Host "Performing Best Practices Analyzer on dataset: $datasetName."
+        # Call Tabular Editor BPA!
+        Write-Host "Performing Best Practice Analyzer on dataset: $datasetName."
         Write-Host "Output will be saved in file: $DatasetTRXOutputPath."
-        exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$($credential.getNetworkCredential().username)@$PowerBIServicePrincipalTenantId;Password=$($credential.getNetworkCredential().password)"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1)
+        exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$PowerBIServicePrincipalSecret"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1)
         Write-Host "=================================================================================================================================="
     }
     Write-Host "Finished on workspace: $workspaceName."
     Write-Host "=================================================================================================================================="
 }
 Write-Host "Script finished."
+Read-Host -Prompt 'Press enter to close this window...'
