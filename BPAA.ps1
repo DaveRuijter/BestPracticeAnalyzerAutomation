@@ -159,8 +159,7 @@ Write-Host "====================================================================
 
 # Connect to the Power BI Service
 Write-Host 'Creating credential based on Service Principal and connecting to the Power BI Service...'
-$PowerBIServicePrincipalSecretSecured = $PowerBIServicePrincipalSecret | ConvertTo-SecureString -asPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential($PowerBIServicePrincipalClientId, $PowerBIServicePrincipalSecretSecured)
+$credential = New-Object System.Management.Automation.PSCredential($PowerBIServicePrincipalClientId, $PowerBIServicePrincipalSecret)
 Connect-PowerBIServiceAccount -ServicePrincipal -Credential $credential -Tenant $PowerBIServicePrincipalTenantId
 Write-Host "Done. (details about the environment should be posted above)"
 
@@ -185,7 +184,7 @@ Get-PowerBIWorkspace -All | Where-Object {$_.IsOnDedicatedCapacity -eq $True} | 
         # Call Tabular Editor BPA!
         Write-Host "Performing Best Practice Analyzer on dataset: $datasetName."
         Write-Host "Output will be saved in file: $DatasetTRXOutputPath."
-        exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$PowerBIServicePrincipalSecret"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1)
+        exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$($credential.getNetworkCredential().password)"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1)
         Write-Host "=================================================================================================================================="
     }
     Write-Host "Finished on workspace: $workspaceName."

@@ -8,6 +8,8 @@
 # Provide the correct ObjectId of the Service Principal (again, this is not the object id shown in the Azure Portal!)
 $PowerBIServicePrincipalObjectId = '<insert here>'
 
+$permission = 'member'
+
 Clear-Host
 
 $credential = (Get-Credential)
@@ -22,7 +24,7 @@ Get-PowerBIWorkspace -Scope Organization -Include All -All | Where-Object {$_.Is
     Write-Host "Service Principal already member of: $workspaceName."
   }
   else {
-    Add-PowerBIWorkspaceUser -Id $_.Id -PrincipalType App -Identifier $PowerBIServicePrincipalObjectId -AccessRight Admin      
+    Add-PowerBIWorkspaceUser -Id $_.Id -PrincipalType App -Identifier $PowerBIServicePrincipalObjectId -AccessRight $permission      
   }
 }
 Write-Host "`nScript finished."
