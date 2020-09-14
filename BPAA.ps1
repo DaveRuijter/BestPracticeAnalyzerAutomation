@@ -165,30 +165,59 @@ Write-Host "Done. (details about the environment should be posted above)"
 
 Write-Host "=================================================================================================================================="
 
-# Retrieving all Power BI workspaces (that the Service Principal has the admin role membership in)...
+# Create a new array to hold the dataset info of all datasets over all workspaces
+$biglistofdatasets = [System.Collections.ArrayList]::new()
+
+# Retrieving all workspaces
 Write-Host 'Retrieving all Premium Power BI workspaces (that the Service Principal has the admin role membership in)...'
-Get-PowerBIWorkspace -All | Where-Object {$_.IsOnDedicatedCapacity -eq $True} | ForEach-Object {
-    Write-Host "=================================================================================================================================="
-    $workspaceName = $_.Name
-    Write-Host "Found Premium workspace: $workspaceName.`n"
-    Write-Host "Retrieving all datasets in the workspace."
-    Get-PowerBIDataset -WorkspaceId $_.Id | ForEach-Object {
-        $datasetName = $_.Name
-        Write-Host "Found Premium dataset: $datasetName.`n"
+$workspaces = Get-PowerBIWorkspace -All #-Include All -Scope Organization (commented this, I'm getting an 'Unauthorized' for this approach)
+$workspaces
+if ($workspaces) {
+    Write-Host 'Outputting all workspace info to disk...'
+    $workspacesOutputPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA_workspaces.json"
+    $workspaces | ConvertTo-Json -Compress | Out-File -FilePath $workspacesOutputPath
 
-        # Prepare the output directory (it needs to exist)
-        $DatasetTRXOutputDir = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\$TRXOutputFolder\$workspaceName\"
-        new-item $DatasetTRXOutputDir -itemtype directory -Force | Out-Null # the Out-Null prevents this line of code to output to the host
-        $DatasetTRXOutputPath = Join-Path -Path $DatasetTRXOutputDir -ChildPath "\BPAA - $workspaceName - $datasetName.trx"
+    Write-Host 'Done. Now iterating the workspaces...'
+    $workspaces | Where-Object {$_.IsOnDedicatedCapacity -eq $True} | ForEach-Object {
+        Write-Host "=================================================================================================================================="
+        $workspaceName = $_.Name
+        $worskpaceId = $_.Id
+        Write-Host "Found Premium workspace: $workspaceName.`n"
 
-        # Call Tabular Editor BPA!
-        Write-Host "Performing Best Practice Analyzer on dataset: $datasetName."
-        Write-Host "Output will be saved in file: $DatasetTRXOutputPath."
-        exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$($credential.getNetworkCredential().password)"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1)
+        Write-Host "Now retrieving all datasets in the workspace..."
+        $datasets = Get-PowerBIDataset -WorkspaceId $_.Id 
+        $datasets | Add-Member -MemberType NoteProperty -Name "WorkspaceId" -Value $worskpaceId
+        $biglistofdatasets += $datasets
+        #$datasets
+        
+        if ($datasets) {
+            Write-Host 'Done. Now iterating the datasets...'
+            $datasets | ForEach-Object {
+                $datasetName = $_.Name
+                Write-Host "Found dataset: $datasetName.`n"
+
+                # Prepare the output directory (it needs to exist)
+                $DatasetTRXOutputDir = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\$TRXOutputFolder\$workspaceName\"
+                new-item $DatasetTRXOutputDir -itemtype directory -Force | Out-Null # the Out-Null prevents this line of code to output to the host
+                $DatasetTRXOutputPath = Join-Path -Path $DatasetTRXOutputDir -ChildPath "\BPAA - $workspaceName - $datasetName.trx"
+
+                # Call Tabular Editor BPA!
+                Write-Host "Performing Best Practice Analyzer on dataset: $datasetName."
+                Write-Host "Output will be saved in file: $DatasetTRXOutputPath."
+                exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$($credential.getNetworkCredential().password)"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1)
+            }
+        }
         Write-Host "=================================================================================================================================="
     }
+    
     Write-Host "Finished on workspace: $workspaceName."
     Write-Host "=================================================================================================================================="
 }
+
+#$biglistofdatasets
+Write-Host 'Outputting all datasets info to disk...'
+$datasetsOutputPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA_datasets.json"
+$biglistofdatasets | ConvertTo-Json -Compress | Out-File -FilePath $datasetsOutputPath
+
 Write-Host "Script finished."
 Read-Host -Prompt 'Press enter to close this window...'
