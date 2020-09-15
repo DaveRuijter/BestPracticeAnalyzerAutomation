@@ -28,8 +28,8 @@
 
 # Name of the folder to contain the .trx files (standard VSTEST results)
 # This folder wil be created in the same directory as this script.
-# Note: each Power BI workspace will get its own subfolder within this $TRXOutputFolder.
-$TRXOutputFolder = "BPAA_output"
+# Note: each Power BI workspace will get its own subfolder within this $TRXFilesOutputSubfolderName.
+$TRXFilesOutputSubfolderName = "BPAA_output"
 
 # Download URL for Tabular Editor portable (you can leave this default, or specify another version):
 $TabularEditorUrl = "https://github.com/otykier/TabularEditor/releases/download/2.12.2/TabularEditor.Portable.zip"
@@ -177,7 +177,6 @@ $biglistofdatasets = [System.Collections.ArrayList]::new()
 # Retrieving all workspaces
 Write-Host 'Retrieving all Premium Power BI workspaces (that the Service Principal has the admin role membership in)...'
 $workspaces = Get-PowerBIWorkspace -All #-Include All -Scope Organization (commented this, I'm getting an 'Unauthorized' for this approach)
-$workspaces
 if ($workspaces) {
     Write-Host 'Outputting all workspace info to disk...'
     $workspacesOutputPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA_workspaces.json"
@@ -203,14 +202,14 @@ if ($workspaces) {
                 Write-Host "Found dataset: $datasetName.`n"
 
                 # Prepare the output directory (it needs to exist)
-                $DatasetTRXOutputDir = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\$TRXOutputFolder\$workspaceName\"
+                $DatasetTRXOutputDir = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\$TRXFilesOutputSubfolderName\$workspaceName\"
                 new-item $DatasetTRXOutputDir -itemtype directory -Force | Out-Null # the Out-Null prevents this line of code to output to the host
                 $DatasetTRXOutputPath = Join-Path -Path $DatasetTRXOutputDir -ChildPath "\BPAA - $workspaceName - $datasetName.trx"
 
                 # Call Tabular Editor BPA!
                 Write-Host "Performing Best Practice Analyzer on dataset: $datasetName."
                 Write-Host "Output will be saved in file: $DatasetTRXOutputPath."
-                exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$($credential.getNetworkCredential().password)"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1)
+                exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$($credential.getNetworkCredential().password)"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1) | Out-Null
             }
         }
         Write-Host "=================================================================================================================================="
