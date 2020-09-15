@@ -55,6 +55,15 @@ $PowerBIServicePrincipalTenantId = Read-Host -Prompt 'Specify the tenantid of th
 # =================================================================================================================================================
 # =================================================================================================================================================
 
+function Get-ScriptDirectory {
+    if ($psise) {
+        Split-Path $psise.CurrentFile.FullPath
+    }
+    else {
+        $global:PSScriptRoot
+    }
+}
+
 # Couple of functions to help call the .exe
 # Author: https://mnaoumov.wordpress.com/
 function Invoke-NativeApplication
@@ -104,6 +113,12 @@ function Test-CalledFromPrompt
 Set-Alias -Name exec -Value Invoke-NativeApplication
 # ==================================================================================================================================
 
+# Start transcript
+$Logfile = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA_LogFile.txt"
+Start-Transcript -Path $Logfile
+
+# ==================================================================================================================================
+
 Clear-Host
 
 # Verifying if the PowerShell Power BI management module is installed
@@ -120,15 +135,6 @@ else {
     catch [Exception] {
         $_.message 
         exit
-    }
-}
-
-function Get-ScriptDirectory {
-    if ($psise) {
-        Split-Path $psise.CurrentFile.FullPath
-    }
-    else {
-        $global:PSScriptRoot
     }
 }
 
@@ -214,10 +220,15 @@ if ($workspaces) {
     Write-Host "=================================================================================================================================="
 }
 
-#$biglistofdatasets
 Write-Host 'Outputting all datasets info to disk...'
 $datasetsOutputPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA_datasets.json"
 $biglistofdatasets | ConvertTo-Json -Compress | Out-File -FilePath $datasetsOutputPath
 
 Write-Host "Script finished."
-Read-Host -Prompt 'Press enter to close this window...'
+
+# Open Power BI template file
+$PBITLocation = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA insights.pbit"
+Invoke-Item $PBITLocation
+
+# Stop tracing errors
+Stop-Transcript
