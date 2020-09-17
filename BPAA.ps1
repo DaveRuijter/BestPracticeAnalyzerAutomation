@@ -26,9 +26,8 @@
 
 # PARAMETERS
 
-# Name of the folder to contain the .trx files (standard VSTEST results)
-# This folder wil be created in the same directory as this script.
-# Note: each Power BI workspace will get its own subfolder within this $TRXFilesOutputSubfolderName.
+# Directories
+$OutputDirectory = "C:\PowerBI_BPAA_output"
 $TRXFilesOutputSubfolderName = "BPAA_output"
 
 # Download URL for Tabular Editor portable (you can leave this default, or specify another version):
@@ -113,8 +112,11 @@ function Test-CalledFromPrompt
 Set-Alias -Name exec -Value Invoke-NativeApplication
 # ==================================================================================================================================
 
+$CurrentDateTime = (Get-Date).tostring("yyyyMMdd-HHmmss")
+
 # Start transcript
-$Logfile = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA_LogFile.txt"
+$Logfile = Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime\BPAA_LogFile.txt"
+new-item $(Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime") -itemtype directory -Force | Out-Null
 Start-Transcript -Path $Logfile
 
 # ==================================================================================================================================
@@ -138,7 +140,7 @@ else {
     }
 }
 
-# Download destination (root of PowerShell script execution path):
+# Download destination (root of this PowerShell script path):
 $TabularEditorPortableRootPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\TabularEditorPortable"
 new-item $TabularEditorPortableRootPath -itemtype directory -Force | Out-Null
 $TabularEditorPortableDownloadDestination = Join-Path -Path $TabularEditorPortableRootPath -ChildPath "\TabularEditor.zip"
@@ -174,12 +176,16 @@ Write-Host "====================================================================
 # Create a new array to hold the dataset info of all datasets over all workspaces
 $biglistofdatasets = [System.Collections.ArrayList]::new()
 
+# Prepare the output directory (it needs to exist)
+$OutputDir = Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime"
+new-item $OutputDir -itemtype directory -Force | Out-Null # the Out-Null prevents this line of code to output to the host
+
 # Retrieving all workspaces
 Write-Host 'Retrieving all Premium Power BI workspaces (that the Service Principal has the admin role membership in)...'
 $workspaces = Get-PowerBIWorkspace -All #-Include All -Scope Organization (commented this, I'm getting an 'Unauthorized' for this approach)
 if ($workspaces) {
     Write-Host 'Outputting all workspace info to disk...'
-    $workspacesOutputPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA_workspaces.json"
+    $workspacesOutputPath = Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime\BPAA_workspaces.json"
     $workspaces | ConvertTo-Json -Compress | Out-File -FilePath $workspacesOutputPath
 
     Write-Host 'Done. Now iterating the workspaces...'
@@ -190,7 +196,8 @@ if ($workspaces) {
         Write-Host "Found Premium workspace: $workspaceName.`n"
 
         Write-Host "Now retrieving all datasets in the workspace..."
-        $datasets = Get-PowerBIDataset -WorkspaceId $_.Id 
+        # Added a filter to skip datasets called "Report Usage Metrics Model"
+        $datasets = Get-PowerBIDataset -WorkspaceId $_.Id | Where-Object {$_.Name -ne "Report Usage Metrics Model"}
         $datasets | Add-Member -MemberType NoteProperty -Name "WorkspaceId" -Value $worskpaceId
         $biglistofdatasets += $datasets
         #$datasets
@@ -202,14 +209,14 @@ if ($workspaces) {
                 Write-Host "Found dataset: $datasetName.`n"
 
                 # Prepare the output directory (it needs to exist)
-                $DatasetTRXOutputDir = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\$TRXFilesOutputSubfolderName\$workspaceName\"
+                $DatasetTRXOutputDir = Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime\$TRXFilesOutputSubfolderName\$workspaceName\"
                 new-item $DatasetTRXOutputDir -itemtype directory -Force | Out-Null # the Out-Null prevents this line of code to output to the host
                 $DatasetTRXOutputPath = Join-Path -Path $DatasetTRXOutputDir -ChildPath "\BPAA - $workspaceName - $datasetName.trx"
 
                 # Call Tabular Editor BPA!
                 Write-Host "Performing Best Practice Analyzer on dataset: $datasetName."
                 Write-Host "Output will be saved in file: $DatasetTRXOutputPath."
-                exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$($credential.getNetworkCredential().password)"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(1) | Out-Null
+                exec { cmd /c """$TabularEditorPortableExePath"" ""Provider=MSOLAP;Data Source=powerbi://api.powerbi.com/v1.0/myorg/$workspaceName;User ID=app:$PowerBIServicePrincipalClientId@$PowerBIServicePrincipalTenantId;Password=$($credential.getNetworkCredential().password)"" ""$datasetName"" -A ""$TabularEditorBPARulesPath"" -TRX ""$DatasetTRXOutputPath""" } @(0, 1) $True #| Out-Null
             }
         }
         Write-Host "=================================================================================================================================="
@@ -220,7 +227,7 @@ if ($workspaces) {
 }
 
 Write-Host 'Outputting all datasets info to disk...'
-$datasetsOutputPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA_datasets.json"
+$datasetsOutputPath = Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime\BPAA_datasets.json"
 $biglistofdatasets | ConvertTo-Json -Compress | Out-File -FilePath $datasetsOutputPath
 
 Write-Host "Script finished."

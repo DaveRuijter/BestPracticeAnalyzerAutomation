@@ -1,31 +1,36 @@
-﻿## This script will add the given Service Principal as an admin in all the Power BI workspaces
-## THe Power BI cmdlet needs the correct objectID, and that's NOT the one visible in the Azure Portal!
+﻿## This script will add the given Service Principal as an admin in all the Premium Power BI workspaces
+## It will first ask for the correct ObjectId of the Service Principal
+## Then it will ask for the credentials of a Power BI Service Administrator
 
-## Tip: You can use a script in the BPAA repo to get the correct objectid: GetCorrectServicePrincipalObjectId.ps1.
-## Or, you can paste this code below in the Azure Cloud Shell of the Azure Portal:
-## az ad sp show --id "<input your ClientId here>" --query "{objectId:objectId}" --output tsv
-
-# Provide the correct ObjectId of the Service Principal (again, this is not the object id shown in the Azure Portal!)
-$PowerBIServicePrincipalObjectId = '<insert here>'
+## IMPORTANT: you need the correct ObjectId of the Service Principal
+$PowerBIServicePrincipalObjectId = Read-Host -Prompt 'Specify the ObjectId of the Service Principal (you can find this in the "Enterprise applications" screen in Azure Active Directory'
 
 $permission = 'member'
 
 Clear-Host
 
-$credential = (Get-Credential)
-Connect-PowerBIServiceAccount -Credential $credential
+Connect-PowerBIServiceAccount
 
-Get-PowerBIWorkspace -Scope Organization -Include All -All | Where-Object {$_.IsOnDedicatedCapacity -eq $True} | ForEach-Object {
+$listofworkspaces = [System.Collections.ArrayList]::new()
+
+Get-PowerBIWorkspace -All -Scope Organization -Include All | Where-Object {$_.IsOnDedicatedCapacity -eq $True -and $_.Type -eq "Workspace"} | ForEach-Object {
   Write-Host "=================================================================================================================================="
   $workspaceName = $_.Name
+  $listofworkspaces += $workspaceName
   Write-Host "Found Premium workspace: $workspaceName."
   if ($_.Users | Where-Object {$_.Identifier -eq $PowerBIServicePrincipalObjectId})
   {
     Write-Host "Service Principal already member of: $workspaceName."
   }
   else {
-    Add-PowerBIWorkspaceUser -Id $_.Id -PrincipalType App -Identifier $PowerBIServicePrincipalObjectId -AccessRight $permission      
+    Write-Host "Adding Service Principal to: $workspaceName."
+    Add-PowerBIWorkspaceUser -Scope Organization -Id $_.Id -PrincipalType App -Identifier $PowerBIServicePrincipalObjectId -AccessRight $permission
+    Write-Host "Done."
   }
 }
+
+Write-Host "=================================================================================================================================="
+
+$listofworkspaces
+
 Write-Host "`nScript finished."
-Read-Host -Prompt 'Press enter to close this window...'
