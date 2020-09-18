@@ -41,6 +41,9 @@ $PowerBIServicePrincipalClientId = Read-Host -Prompt 'Specify the Application (C
 $PowerBIServicePrincipalSecret = Read-Host -Prompt 'Specify the secret of the Service Principal' -AsSecureString
 $PowerBIServicePrincipalTenantId = Read-Host -Prompt 'Specify the tenantid of the Service Principal'
 
+# Download URL for Tabular Editor portable (you can leave this default, or specify another version):
+$BPAATemplateReportDownloadUrl = "https://github.com/DaveRuijter/BestPracticeAnalyzerAutomation/raw/master/BPAA%20insights.pbit"
+
 # =================================================================================================================================================
 
 # TODO:
@@ -55,12 +58,13 @@ $PowerBIServicePrincipalTenantId = Read-Host -Prompt 'Specify the tenantid of th
 # =================================================================================================================================================
 
 function Get-ScriptDirectory {
-    if ($psise) {
-        Split-Path $psise.CurrentFile.FullPath
-    }
-    else {
-        $global:PSScriptRoot
-    }
+    #if ($psise) {
+    #    Split-Path $psise.CurrentFile.FullPath
+    #}
+    #else {
+    #    $global:PSScriptRoot
+    #}
+    $OutputDirectory
 }
 
 # Couple of functions to help call the .exe
@@ -140,13 +144,13 @@ else {
     }
 }
 
-# Download destination (root of this PowerShell script path):
+Write-Host "=================================================================================================================================="
+
+# Specify download destination of Tabular Editor:
 $TabularEditorPortableRootPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\TabularEditorPortable"
 new-item $TabularEditorPortableRootPath -itemtype directory -Force | Out-Null
 $TabularEditorPortableDownloadDestination = Join-Path -Path $TabularEditorPortableRootPath -ChildPath "\TabularEditor.zip"
 $TabularEditorPortableExePath = Join-Path -Path $TabularEditorPortableRootPath -ChildPath "\TabularEditor.exe"
-
-Write-Host "=================================================================================================================================="
 
 # Download portable version of Tabular Editor from GitHub:
 Write-Host 'Downloading the portable version of Tabular Editor from GitHub...'
@@ -162,6 +166,15 @@ Write-Host 'Downloading the standard Best Practice Rules of Tabular Editor from 
 $TabularEditorBPARulesPath = Join-Path -Path $TabularEditorPortableRootPath -ChildPath "\BPARules-PowerBI.json"
 Invoke-WebRequest -Uri $BestPracticesRulesUrl -OutFile $TabularEditorBPARulesPath
 Write-Host 'Done.'
+
+# Specify download destination of the Power BI template report:
+$TemplateReportRootPath = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\"
+new-item $TemplateReportRootPath -itemtype directory -Force | Out-Null
+$TemplateReportDownloadDestination = Join-Path -Path $TemplateReportRootPath -ChildPath "\BPAA insights.pbit"
+
+# Download BPAA Template report from GitHub:
+Write-Host 'Downloading the template Power BI report from GitHub...'
+Invoke-WebRequest -Uri $BPAATemplateReportDownloadUrl -OutFile $TemplateReportDownloadDestination
 
 Write-Host "=================================================================================================================================="
 
@@ -226,15 +239,15 @@ if ($workspaces) {
     Write-Host "=================================================================================================================================="
 }
 
-Write-Host 'Outputting all datasets info to disk...'
+Write-Host 'Outputting all metadata of the datasets to disk...'
 $datasetsOutputPath = Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime\BPAA_datasets.json"
 $biglistofdatasets | ConvertTo-Json -Compress | Out-File -FilePath $datasetsOutputPath
 
+# Open Power BI template file
+Write-Host "Open Power BI template file..."
+Invoke-Item $TemplateReportDownloadDestination
+
 Write-Host "Script finished."
 
-# Open Power BI template file
-$PBITLocation = Join-Path -Path $(Get-ScriptDirectory) -ChildPath "\BPAA insights.pbit"
-Invoke-Item $PBITLocation
-
-# Stop tracing errors
+# Stop tracing
 Stop-Transcript
