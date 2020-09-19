@@ -1,9 +1,9 @@
 ﻿# =================================================================================================================================================
 # Best Practice Analyzer Automation (BPAA)
-# Version 0.01 alpha 2
 # 
 # Dave Ruijter
-# https://moderndata.ai/
+# https://moderndata.ai
+# https://github.com/DaveRuijter/BestPracticeAnalyzerAutomation
 # =================================================================================================================================================
 
 # README
@@ -15,10 +15,10 @@
 # If you want to modify the best-practices rules, or add your own, contribute to the rules on GitHub:
 # https://github.com/TabularEditor/BestPracticeRules#contributing. 
 
-# The script loopts the workspaces that the given service principal has the admin role membership in.
+# The script loopts the workspaces that the given service principal has the member or admin role membership in (the script installs the PowerShell Power BI management module MicrosoftPowerBIMgmt)
+# The script then runs the Best Practice Analyzer on each data model in the workspace (the script downloads the portable version of Tabular Editor to do this).
 # The script will output the results of each analysis in the given directory as .trx files, a standard VSTEST result (JSON).
-# The script downloads the portable version of Tabular Editor to a new folder called TabularEditorPortable in the directory of this .ps1.
-# The script installs the PowerShell Power BI management module (MicrosoftPowerBIMgmt).
+# The script will download and open the Power BI template report of the solution, that will load the .trx files and provides a start to analyze the results.
 
 
 # Also credits and thanks to https://mnaoumov.wordpress.com/ for the functions to help call the .exe.
@@ -33,15 +33,15 @@ $TRXFilesOutputSubfolderName = "BPAA_output"
 # Download URL for Tabular Editor portable (you can leave this default, or specify another version):
 $TabularEditorUrl = "https://github.com/otykier/TabularEditor/releases/download/2.12.2/TabularEditor.Portable.zip"
 
-# URL to the BPA rules file
+# URL to the BPA rules file (you can leave this default, or specify another version):
 $BestPracticesRulesUrl = "https://raw.githubusercontent.com/TabularEditor/BestPracticeRules/master/BPARules-PowerBI.json"
 
-# Service Principal values
+# Service Principal values (you can leave it like this, so it will prompt you for the values during execution):
 $PowerBIServicePrincipalClientId = Read-Host -Prompt 'Specify the Application (Client) Id of the Service Principal'
 $PowerBIServicePrincipalSecret = Read-Host -Prompt 'Specify the secret of the Service Principal' -AsSecureString
 $PowerBIServicePrincipalTenantId = Read-Host -Prompt 'Specify the tenantid of the Service Principal'
 
-# Download URL for Tabular Editor portable (you can leave this default, or specify another version):
+# Download URL for BPAA Power BI template report (you can leave this default, or specify another version):
 $BPAATemplateReportDownloadUrl = "https://github.com/DaveRuijter/BestPracticeAnalyzerAutomation/raw/master/BPAA%20insights.pbit"
 
 # =================================================================================================================================================
