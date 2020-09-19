@@ -1,5 +1,7 @@
 # Best Practice Analyzer Automation (BPAA)
 Just a fancy automation/script to run the Best Practice Analyzer of Tabular Editor over all datasets in the Power BI Service.
+Read below for instructions on how to use it, or check out this blog post on it:  
+https://www.moderndata.ai/2020/09/check-the-quality-of-all-power-bi-data-models-at-once-with-best-practice-analyzer-automation-bpaa/
 
 The power of this script is of course in the Best Practice Analyzer that is part of Tabular Editor! 
 Please visit https://tabulareditor.com/ and reach out Daniel Otykier and thank him!
