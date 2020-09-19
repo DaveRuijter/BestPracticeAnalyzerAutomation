@@ -17,11 +17,13 @@ https://github.com/TabularEditor/BestPracticeRules#contributing.
 
 
 ## prerequisites
-- You need a Service Principal (e.g. App Registration) in Azure Active Directory. Nothing special, just add a secret to it and write down the ClientId, Secret, TenantId.
-- Download the latest version of the BPAA solution from the repo in GitHub. Unzip the BPAA solution to a directory of choice. (or only the BPAA.ps1 file). 
-- Add the Service Principal of step 1 to all Power BI workspaces, and make sure it has the ‘member’ or ‘admin’ role. If you have more than a dozen workspaces you would want to script this! No worries, I’ve added a script for that in the BPAA repo. You can find it in the directory of step 3. Note: you need the correct ObjectId of the Service Principal! You can find it in the “Enterprise applications” screen in Azure Active Directory (not the App Registrations screen!).
-- The solution only works on v2 workspaces. So, this might be an appropriate time to upgrade those workspaces?
-- The solution only works on workspaces in Premium capacity (it needs the XMLA endpoint). You could spin up an Azure Power BI Embedded (A sku) for the duration of this exercise, and connect the workspaces to that capacity. When you’re done you connect them back to shared capacity and suspend the premium capacity.
+1. You need a Service Principal (e.g. App Registration) in Azure Active Directory. Nothing special, just add a secret to it and write down the ClientId, Secret, TenantId.
+1. Download the latest version of the BPAA solution from the repo in GitHub. Unzip the BPAA solution to a directory of choice. (or only the BPAA.ps1 file). 
+1. Add the Service Principal of step 1 to all Power BI workspaces, and make sure it has the ‘member’ or ‘admin’ role. If you have more than a dozen workspaces you would want to script this! No worries, I’ve added a script for that in the BPAA repo. You can find it in the directory of step 2. Note: you need the correct ObjectId of the Service Principal! You can find it in the “Enterprise applications” screen in Azure Active Directory (not the App Registrations screen!).
+1. The solution only works on v2 workspaces. So, this might be an appropriate time to upgrade those workspaces?
+1. The solution only works on workspaces in Premium capacity (it needs the XMLA endpoint). You could spin up an Azure Power BI Embedded (A sku) for the duration of this exercise, and connect the workspaces to that capacity. When you’re done you connect them back to shared capacity and suspend the premium capacity.
 
-
+## credits
+The power of this script is of course in the Best Practice Analyzer that is part of Tabular Editor! 
+Please visit https://tabulareditor.com/ and reach out Daniel Otykier and thank him!  
 Also credits and thanks to https://mnaoumov.wordpress.com/ for the functions to help call the .exe.
