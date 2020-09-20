@@ -36,11 +36,6 @@ $TabularEditorUrl = "https://github.com/otykier/TabularEditor/releases/download/
 # URL to the BPA rules file (you can leave this default, or specify another version):
 $BestPracticesRulesUrl = "https://raw.githubusercontent.com/TabularEditor/BestPracticeRules/master/BPARules-PowerBI.json"
 
-# Service Principal values (you can leave it like this, so it will prompt you for the values during execution):
-$PowerBIServicePrincipalClientId = Read-Host -Prompt 'Specify the Application (Client) Id of the Service Principal'
-$PowerBIServicePrincipalSecret = Read-Host -Prompt 'Specify the secret of the Service Principal' -AsSecureString
-$PowerBIServicePrincipalTenantId = Read-Host -Prompt 'Specify the tenantid of the Service Principal'
-
 # Download URL for BPAA Power BI template report (you can leave this default, or specify another version):
 $BPAATemplateReportDownloadUrl = "https://github.com/DaveRuijter/BestPracticeAnalyzerAutomation/raw/master/BPAA%20insights.pbit"
 
@@ -124,11 +119,35 @@ new-item $(Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime") -ite
 Start-Transcript -Path $Logfile
 
 # ==================================================================================================================================
-
 Clear-Host
+$ErrorActionPreference = 'Stop'
+Write-Host "
+========================================================================
+   __  ___         __                 ___         __                 _ 
+  /  |/  /___  ___/ /___  ____ ___   / _ \ ___ _ / /_ ___ _   ___ _ (_)
+ / /|_/ // _ \/ _  // -_)/ __// _ \ / // // _ '// __// _ '/_ / _ '// / 
+/_/  /_/ \___/\_,_/ \__//_/  /_//_//____/ \_,_/ \__/ \_,_/(_)\_,_//_/  
+                                                                    
+   ___                     ___         _    _  __                      
+  / _ \ ___ _ _  __ ___   / _ \ __ __ (_)  (_)/ /_ ___  ____           
+ / // // _ '/| |/ // -_) / , _// // // /  / // __// -_)/ __/           
+/____/ \_,_/ |___/ \__/ /_/|_| \_,_//_/__/ / \__/ \__//_/              
+                                      |___/                            
+========================================================================
+
+" -ForegroundColor DarkCyan
+
+Write-Host "=================================================================================================================================="
+Write-Host "Best Practice Analyzer Automation starting..." -ForegroundColor DarkCyan
+
+# Service Principal values (you can leave it like this, so it will prompt you for the values during execution):
+$PowerBIServicePrincipalClientId = Read-Host -Prompt 'Specify the Application (Client) Id of the Service Principal'
+$PowerBIServicePrincipalSecret = Read-Host -Prompt 'Specify the secret of the Service Principal' -AsSecureString
+$PowerBIServicePrincipalTenantId = Read-Host -Prompt 'Specify the tenantid of the Service Principal'
+
+Write-Host "=================================================================================================================================="
 
 # Verifying if the PowerShell Power BI management module is installed
-Write-Host "=================================================================================================================================="
 Write-Host 'Verifying if the PowerShell Power BI management module is installed...'
 if (Get-Module -ListAvailable -Name MicrosoftPowerBIMgmt) {
     Write-Host "MicrosoftPowerBIMgmt already installed."
@@ -194,7 +213,7 @@ $OutputDir = Join-Path -Path $OutputDirectory -ChildPath "\$CurrentDateTime"
 new-item $OutputDir -itemtype directory -Force | Out-Null # the Out-Null prevents this line of code to output to the host
 
 # Retrieving all workspaces
-Write-Host 'Retrieving all Premium Power BI workspaces (that the Service Principal has the admin role membership in)...'
+Write-Host 'Retrieving all Premium Power BI workspaces (that the Service Principal has a membership in)...'
 $workspaces = Get-PowerBIWorkspace -All #-Include All -Scope Organization (commented this, I'm getting an 'Unauthorized' for this approach)
 if ($workspaces) {
     Write-Host 'Outputting all workspace info to disk...'
